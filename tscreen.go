@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -1393,26 +1394,26 @@ func (t *tScreen) parsePaste(buf *bytes.Buffer, evs *[]Event) bool {
 }
 
 func (t *tScreen) parseOSC52Paste(buf *bytes.Buffer, evs *[]Event) (bool, bool) {
+	str := buf.String()
 	b := buf.Bytes()
 
 	prefixLen := len(pasteOSC52Begin) + 2
-	suffixLen := len(pasteOSC52End)
-	if bytes.HasPrefix(b, []byte(pasteOSC52Begin)) || bytes.HasPrefix([]byte(pasteOSC52Begin), b) {
-		// OSC52 paste has started
-		if len(b) > len(pasteOSC52Begin)+2 && bytes.HasSuffix(b, []byte(pasteOSC52End)) {
+	if strings.HasPrefix(str, pasteOSC52Begin) || strings.HasPrefix(pasteOSC52Begin, str) {
+		idx := strings.Index(str, pasteOSC52End)
+		log.Println(b, idx, len(str))
+		if idx >= prefixLen {
 			// OSC52 paste has ended
-			payload := b[prefixLen : len(b)-suffixLen]
+			payload := buf.Next(idx)[prefixLen:]
+			buf.Next(len(pasteOSC52End))
 			data := make([]byte, len(payload))
 			n, err := base64.StdEncoding.Decode(data, payload)
 			data = data[:n]
 
 			t.escbuf.Write(b)
 
-			buf.Reset()
-
 			if err != nil {
-				// error must be something else...?
-				return false, false
+				// discard the paste since it is invalid
+				return true, true
 			}
 
 			*evs = append(*evs, NewEventPaste(string(data), t.escbuf.String()))
