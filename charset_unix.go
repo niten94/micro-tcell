@@ -1,3 +1,4 @@
+//go:build !windows && !nacl && !plan9
 // +build !windows,!nacl,!plan9
 
 // Copyright 2016 The TCell Authors
@@ -37,7 +38,7 @@ func getCharset() string {
 	if i := strings.IndexRune(locale, '@'); i >= 0 {
 		locale = locale[:i]
 	}
-	if i := strings.IndexRune(locale, '.'); i >= 0 {
+	if i := strings.LastIndexByte(locale, '.'); i >= 0 {
 		locale = locale[i+1:]
 	} else {
 		// Default assumption, and on Linux we can see LC_ALL
