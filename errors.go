@@ -67,6 +67,10 @@ func (ev *EventError) Error() string {
 	return ev.err.Error()
 }
 
+func (ev *EventError) Err() error {
+	return ev.err
+}
+
 func (ev *EventError) EscSeq() string {
 	return ev.err.Error()
 }
