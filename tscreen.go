@@ -218,7 +218,22 @@ func (t *tScreen) SetPaste(p bool) {
 }
 
 func (t *tScreen) RegisterRawSeq(r string) {
+	for _, seq := range t.rawseq {
+		if seq == r {
+			return
+		}
+	}
 	t.rawseq = append(t.rawseq, r)
+}
+
+func (t *tScreen) UnregisterRawSeq(r string) {
+	for i, seq := range t.rawseq {
+		if seq == r {
+			t.rawseq[i] = t.rawseq[len(t.rawseq)-1]
+			t.rawseq = t.rawseq[:len(t.rawseq)-1]
+			break
+		}
+	}
 }
 
 func (t *tScreen) prepareKeyMod(key Key, mod ModMask, val string) {
@@ -1393,6 +1408,26 @@ func (t *tScreen) parsePaste(buf *bytes.Buffer, evs *[]Event) bool {
 	return false
 }
 
+func (t *tScreen) parseRegisteredRawSeq(buf *bytes.Buffer, evs *[]Event) bool {
+	b := buf.Bytes()
+
+	if b[0] == '\x1b' && len(t.rawseq) > 0 {
+		strb := string(b)
+		for _, r := range t.rawseq {
+			if strings.HasPrefix(strb, r) {
+				// a registered raw sequence matched the prefix
+				*evs = append(*evs, NewEventRaw(r))
+				t.escbuf.Reset()
+				for i := 0; i < len(r); i++ {
+					buf.ReadByte()
+				}
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (t *tScreen) parseOSC52Paste(buf *bytes.Buffer, evs *[]Event) (bool, bool) {
 	str := buf.String()
 	b := buf.Bytes()
@@ -1479,6 +1514,10 @@ func (t *tScreen) collectEventsFromInput(buf *bytes.Buffer, expire bool) []Event
 
 		partials := 0
 
+		if t.parseRegisteredRawSeq(buf, &res) {
+			continue
+		}
+
 		if t.paste && t.parsePaste(buf, &res) {
 			continue
 		}
@@ -1526,23 +1565,6 @@ func (t *tScreen) collectEventsFromInput(buf *bytes.Buffer, expire bool) []Event
 
 		if partials == 0 || expire {
 			if b[0] == '\x1b' {
-				strb := string(b)
-				completed := false
-				for _, r := range t.rawseq {
-					if strings.HasPrefix(strb, r) {
-						// a registered raw sequence matched the prefix
-						res = append(res, NewEventRaw(r))
-						t.escbuf.Reset()
-						for i := 0; i < len(r); i++ {
-							buf.ReadByte()
-						}
-						completed = true
-						break
-					}
-				}
-				if completed {
-					continue
-				}
 				if len(b) == 1 {
 					res = append(res, NewEventKey(KeyEsc, 0, ModNone, "\x1b"))
 					t.escbuf.Reset()
