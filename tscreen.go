@@ -63,9 +63,9 @@ const (
 // $COLUMNS environment variables can be set to the actual window size,
 // otherwise defaults taken from the terminal database are used.
 func NewTerminfoScreen() (Screen, error) {
-	ti, e := loadDynamicTerminfo(os.Getenv("TERM"))
+	ti, e := terminfo.LookupTerminfo(os.Getenv("TERM"))
 	if e != nil {
-		ti, e = terminfo.LookupTerminfo(os.Getenv("TERM"))
+		ti, e = loadDynamicTerminfo(os.Getenv("TERM"))
 		if e != nil {
 			return nil, e
 		}
@@ -182,9 +182,13 @@ func (t *tScreen) Init() error {
 	if os.Getenv("TCELL_TRUECOLOR") == "disable" {
 		t.truecolor = false
 	}
-	t.colors = make(map[Color]Color)
-	t.palette = make([]Color, t.nColors())
-	for i := 0; i < t.nColors(); i++ {
+	nColors := t.nColors()
+	if nColors > 256 {
+		nColors = 256 // clip to reasonable limits
+	}
+	t.colors = make(map[Color]Color, nColors)
+	t.palette = make([]Color, nColors)
+	for i := 0; i < nColors; i++ {
 		t.palette[i] = Color(i) | ColorValid
 		// identity map for our builtin colors
 		t.colors[Color(i)|ColorValid] = Color(i) | ColorValid
