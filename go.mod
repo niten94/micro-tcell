@@ -1,4 +1,4 @@
-module github.com/zyedidia/tcell/v2
+module github.com/micro-editor/tcell/v2
 
 require (
 	github.com/gdamore/encoding v1.0.0

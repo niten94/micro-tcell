@@ -30,10 +30,10 @@ import (
 
 	"golang.org/x/text/transform"
 
-	"github.com/zyedidia/tcell/v2/terminfo"
+	"github.com/micro-editor/tcell/v2/terminfo"
 
 	// import the stock terminals
-	_ "github.com/zyedidia/tcell/v2/terminfo/base"
+	_ "github.com/micro-editor/tcell/v2/terminfo/base"
 )
 
 // Magic strings for bracketed paste

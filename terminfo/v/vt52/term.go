@@ -2,7 +2,7 @@
 
 package vt52
 
-import "github.com/zyedidia/tcell/v2/terminfo"
+import "github.com/micro-editor/tcell/v2/terminfo"
 
 func init() {
 

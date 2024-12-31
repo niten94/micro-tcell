@@ -24,7 +24,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/zyedidia/tcell/v2"
+	"github.com/micro-editor/tcell/v2"
 )
 
 func makebox(s tcell.Screen) {

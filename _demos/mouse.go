@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/zyedidia/tcell/v2"
-	"github.com/zyedidia/tcell/v2/encoding"
+	"github.com/micro-editor/tcell/v2"
+	"github.com/micro-editor/tcell/v2/encoding"
 
 	"github.com/mattn/go-runewidth"
 )
