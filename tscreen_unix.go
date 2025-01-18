@@ -1,4 +1,4 @@
-// +build linux
+// +build aix dragonfly freebsd linux netbsd openbsd solaris zos
 
 // Copyright 2019 The TCell Authors
 //
@@ -22,17 +22,12 @@ import (
 	"strconv"
 	"syscall"
 
-	"golang.org/x/sys/unix"
+	"golang.org/x/term"
 )
-
-type termiosPrivate struct {
-	tio *unix.Termios
-}
 
 func (t *tScreen) termioInit() error {
 	var e error
-	var raw *unix.Termios
-	var tio *unix.Termios
+	var state *term.State
 
 	if t.in, e = os.OpenFile("/dev/tty", os.O_RDONLY, 0); e != nil {
 		goto failed
@@ -41,40 +36,12 @@ func (t *tScreen) termioInit() error {
 		goto failed
 	}
 
-	tio, e = unix.IoctlGetTermios(int(t.out.(*os.File).Fd()), unix.TCGETS)
+	state, e = term.MakeRaw(int(t.out.(*os.File).Fd()))
 	if e != nil {
 		goto failed
 	}
 
-	t.tiosp = &termiosPrivate{tio: tio}
-
-	// make a local copy, to make it raw
-	raw = &unix.Termios{
-		Cflag: tio.Cflag,
-		Oflag: tio.Oflag,
-		Iflag: tio.Iflag,
-		Lflag: tio.Lflag,
-		Cc:    tio.Cc,
-	}
-	raw.Iflag &^= (unix.IGNBRK | unix.BRKINT | unix.PARMRK | unix.ISTRIP |
-		unix.INLCR | unix.IGNCR | unix.ICRNL | unix.IXON)
-	raw.Oflag &^= unix.OPOST
-	raw.Lflag &^= (unix.ECHO | unix.ECHONL | unix.ICANON | unix.ISIG |
-		unix.IEXTEN)
-	raw.Cflag &^= (unix.CSIZE | unix.PARENB)
-	raw.Cflag |= unix.CS8
-
-	// This is setup for blocking reads.  In the past we attempted to
-	// use non-blocking reads, but now a separate input loop and timer
-	// copes with the problems we had on some systems (BSD/Darwin)
-	// where close hung forever.
-	raw.Cc[unix.VMIN] = 1
-	raw.Cc[unix.VTIME] = 0
-
-	e = unix.IoctlSetTermios(int(t.out.(*os.File).Fd()), unix.TCSETS, raw)
-	if e != nil {
-		goto failed
-	}
+	t.saved = state
 
 	signal.Notify(t.sigwinch, syscall.SIGWINCH)
 
@@ -100,8 +67,8 @@ func (t *tScreen) termioFini() {
 
 	<-t.indoneq
 
-	if t.out != nil && t.tiosp != nil {
-		unix.IoctlSetTermios(int(t.out.(*os.File).Fd()), unix.TCSETSF, t.tiosp.tio)
+	if t.out != nil && t.saved != nil {
+		term.Restore(int(t.out.(*os.File).Fd()), t.saved)
 		t.out.(*os.File).Close()
 	}
 
@@ -111,13 +78,10 @@ func (t *tScreen) termioFini() {
 }
 
 func (t *tScreen) getWinSize() (int, int, error) {
-
-	wsz, err := unix.IoctlGetWinsize(int(t.out.(*os.File).Fd()), unix.TIOCGWINSZ)
+	cols, rows, err := term.GetSize(int(t.out.(*os.File).Fd()))
 	if err != nil {
 		return -1, -1, err
 	}
-	cols := int(wsz.Col)
-	rows := int(wsz.Row)
 	if cols == 0 {
 		colsEnv := os.Getenv("COLUMNS")
 		if colsEnv != "" {
