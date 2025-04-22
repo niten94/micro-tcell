@@ -127,7 +127,6 @@ type tScreen struct {
 	clear     bool
 	cursorx   int
 	cursory   int
-	tiosp     *termiosPrivate
 	wasbtn    bool
 	acs       map[rune]string
 	charset   string

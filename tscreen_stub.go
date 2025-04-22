@@ -21,8 +21,6 @@ package tcell
 // this all work nicely with both cygwin and Windows console, so we
 // decline to do so here.
 
-type termiosPrivate struct{}
-
 func (t *tScreen) termioInit() error {
 	return ErrNoScreen
 }

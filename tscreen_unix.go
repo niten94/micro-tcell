@@ -1,4 +1,4 @@
-// +build linux
+// +build aix dragonfly freebsd linux netbsd openbsd solaris zos
 
 // Copyright 2019 The TCell Authors
 //
@@ -25,8 +25,6 @@ import (
 	"golang.org/x/sys/unix"
 	"golang.org/x/term"
 )
-
-type termiosPrivate struct{}
 
 func (t *tScreen) termioInit() error {
 	var e error
