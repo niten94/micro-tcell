@@ -1,4 +1,4 @@
-// +build linux
+// +build aix dragonfly freebsd linux netbsd openbsd solaris zos
 
 // Copyright 2019 The TCell Authors
 //
