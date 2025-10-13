@@ -1,4 +1,4 @@
-// +build aix dragonfly freebsd linux netbsd openbsd solaris zos
+// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris zos
 
 // Copyright 2019 The TCell Authors
 //
@@ -26,20 +26,15 @@ import (
 	"golang.org/x/term"
 )
 
-type termiosPrivate struct{}
-
 func (t *tScreen) termioInit() error {
 	var e error
 	var state *term.State
 
-	if t.in, e = os.OpenFile("/dev/tty", os.O_RDONLY, 0); e != nil {
-		goto failed
-	}
-	if t.out, e = os.OpenFile("/dev/tty", os.O_WRONLY, 0); e != nil {
+	if t.in, t.out, e = openTty(); e != nil {
 		goto failed
 	}
 
-	state, e = term.MakeRaw(int(t.out.(*os.File).Fd()))
+	state, e = term.MakeRaw(t.fd())
 	if e != nil {
 		goto failed
 	}
@@ -56,10 +51,10 @@ func (t *tScreen) termioInit() error {
 
 failed:
 	if t.in != nil {
-		t.in.(*os.File).Close()
+		closeTty(t.in)
 	}
 	if t.out != nil {
-		t.out.(*os.File).Close()
+		closeTty(t.out)
 	}
 	return e
 }
@@ -71,18 +66,18 @@ func (t *tScreen) termioFini() {
 	<-t.indoneq
 
 	if t.out != nil && t.saved != nil {
-		term.Restore(int(t.out.(*os.File).Fd()), t.saved)
-		t.out.(*os.File).Close()
+		term.Restore(t.fd(), t.saved)
+		closeTty(t.out)
 	}
 
 	if t.in != nil {
-		t.in.(*os.File).Close()
+		closeTty(t.in)
 	}
 }
 
 func (t *tScreen) getWinSize() (int, int, error) {
 
-	wsz, err := unix.IoctlGetWinsize(int(t.out.(*os.File).Fd()), unix.TIOCGWINSZ)
+	wsz, err := unix.IoctlGetWinsize(t.fd(), unix.TIOCGWINSZ)
 	if err != nil {
 		return -1, -1, err
 	}
